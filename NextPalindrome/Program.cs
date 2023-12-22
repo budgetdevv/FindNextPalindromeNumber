@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace NextPalindrome // Note: actual namespace depends on the project name.
 {
@@ -34,10 +35,22 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 
             else
             {
+                Console.WriteLine("Churning!");
+                
+                var startTime = DateTime.UtcNow;
+                
                 for (int I = 0; I < int.MaxValue; I++)
                 {
                     NextPalindrome(I);
                 }
+
+                var endTime = DateTime.UtcNow;
+
+                var totalTime = endTime - startTime;
+
+                Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
+
+                Console.ReadKey();
             }
             
             return;
@@ -125,12 +138,16 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             #endif
         }
 
+        private static ReadOnlySpan<int> MultiplesOf10 => new int[] { 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000 };
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int NextPalindrome(int num)
+        private static unsafe int NextPalindrome(int num)
         {
             var digits = GetDigits(num);
 
             DEBUG(() => Console.WriteLine($"Digits: {digits}"));
+
+            var multiplesTable = (int*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(MultiplesOf10));
 
             switch (digits)
             {
@@ -145,7 +162,8 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             DEBUG(() => Console.WriteLine($"Digits per half: {digitsPerHalf}"));
             
-            var divisor = (int) Math.Pow(10, digitsPerHalf);
+            // var divisor = (int) Math.Pow(10, digitsPerHalf);
+            var divisor = multiplesTable[digitsPerHalf]; 
             
             DEBUG(() => Console.WriteLine($"Divisor: {divisor}"));
 
