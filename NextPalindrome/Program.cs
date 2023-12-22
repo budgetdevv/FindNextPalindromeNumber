@@ -1,6 +1,7 @@
 ﻿// define PRINT_DEBUG
 
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -20,7 +21,7 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 
             if (TEST)
             {
-                for (int I = 0; I < 1_000_000; I++)
+                for (uint I = 0; I < 1_000_000; I++)
                 {
                     DEBUG(() => Console.WriteLine($"Current Term: {I}"));
                 
@@ -39,7 +40,7 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
                 
                 var startTime = DateTime.UtcNow;
                 
-                for (int I = 0; I < int.MaxValue; I++)
+                for (uint I = 0; I < int.MaxValue; I++)
                 {
                     NextPalindrome(I);
                 }
@@ -57,14 +58,14 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             // Generated with AI
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool IsPalindrome(int n)
+            static bool IsPalindrome(uint n)
             {
                 if (n < 0 || (n % 10 == 0 && n != 0)) 
                 {
                     return false;
                 }
 
-                int reversedNumber = 0;
+                uint reversedNumber = 0;
                 while (n > reversedNumber)
                 {
                     reversedNumber = reversedNumber * 10 + n % 10;
@@ -76,7 +77,7 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 
             // Generated with AI
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int NextPalindromeNaive(int n)
+            static uint NextPalindromeNaive(uint n)
             {
                 while (true)
                 {
@@ -106,15 +107,31 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int ReverseDigits(int num)
+        private static unsafe int GetDigitsFast(uint num, uint* multiplesOf10Table)
         {
-            var newNum = 0;
+            var indexOfHighestSetBit = 31 - BitOperations.LeadingZeroCount(num);
+
+            // Int mul followed by int div ( Truncates ).
+            // Do not convert it to indexOfHighestSetBit * ( 77 / 256 ), as it will become int * float
+            var estDigits = (indexOfHighestSetBit * 77) / 256;
+
+            var offset = (num >= multiplesOf10Table[estDigits]) ? 2 : 1;
+
+            return estDigits + offset;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static uint ReverseDigits(uint num)
+        {
+            uint newNum = 0;
 
             while (true)
             {
                 var cont = num > 9;
                 
-                num = Math.DivRem(num, 10, out var rem);
+                var (quotient, rem) = Math.DivRem(num, 10);
+
+                num = quotient;
                 
                 newNum += rem;
 
@@ -138,16 +155,20 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             #endif
         }
 
-        private static ReadOnlySpan<int> MultiplesOf10 => new int[] { 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000 };
+        private static ReadOnlySpan<uint> MultiplesOf10 => new uint[] { 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000 };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe int NextPalindrome(int num)
+        private static unsafe uint NextPalindrome(uint num)
         {
-            var digits = GetDigits(num);
+            var multiplesTable = (uint*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(MultiplesOf10));
 
+            var multipleTableGetDigitsFast = multiplesTable + 1;
+            
+            // var digits = GetDigits((int) num);
+
+            var digits = GetDigitsFast(num, multipleTableGetDigitsFast);
+            
             DEBUG(() => Console.WriteLine($"Digits: {digits}"));
-
-            var multiplesTable = (int*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(MultiplesOf10));
 
             switch (digits)
             {
@@ -183,11 +204,11 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 
             var hasMiddleTerm = digits % 2 != 0;
 
-            Unsafe.SkipInit(out int middleTerm);
+            Unsafe.SkipInit(out uint middleTerm);
             
             if (hasMiddleTerm)
             {
-                left = Math.DivRem(left, 10, out middleTerm);
+                (left, middleTerm) = Math.DivRem(left, 10);
                 DEBUG(() => Console.WriteLine($"Middle Term: {middleTerm}"));
             }
 
@@ -205,7 +226,7 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             // Unfortunately, this will require more work. E.x. 619: 9 > 6, so we need to add until 626.
             // Here's the cool part: If there's a middle term, and while it is < 9, we can "reset" the right term for "free"
 
-            int numWithoutRightHalf;
+            uint numWithoutRightHalf;
             
             if (hasMiddleTerm && middleTerm < 9)
             {
