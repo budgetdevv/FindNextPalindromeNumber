@@ -6,18 +6,85 @@ using System.Runtime.InteropServices;
 
 namespace NextPalindrome // Note: actual namespace depends on the project name.
 {
-    internal static class Program
+    internal static unsafe class Program
     {
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void Validate()
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        static void Main(string[] args)
         {
-            for (uint I = 0; I < 1_000_000; I++)
-            {
-                DEBUG(() => Console.WriteLine($"Current Term: {I}"));
+            // var multipleTableGetDigitsFast = MultiplesTable + 1;
+            //
+            // GetDigitsFast(1073741824, multipleTableGetDigitsFast);
+            //
+            // return;
+            
+            // How to check codegen:
+            // Mac:
+            // export DOTNET_JitDisasm="Loop"
+            // dotnet run -c Release
+
+            Validate();
+
+            Console.WriteLine("Churning!");
+            
+            var startTime = DateTime.UtcNow;
                 
-                if (NextPalindrome(I) != NextPalindromeNaive(I))
+            Loop();
+            
+            var endTime = DateTime.UtcNow;
+
+            var totalTime = endTime - startTime;
+
+            Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
+
+            Console.ReadKey();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void Loop()
+        {
+            for (uint I = 0; I < int.MaxValue; I++)
+            {
+                NextPalindrome(I);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GetDigits(uint num)
+        {
+            var digits = 1;
+            
+            while (num > 9)
+            {
+                num /= 10;
+                digits++;
+            }
+
+            return digits;
+        }
+        
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void Validate(bool skipGetDigitsFastValidate = true)
+        {
+            if (!skipGetDigitsFastValidate)
+            {
+                var multipleTableGetDigitsFast = MultiplesTable + 1;
+            
+                for (uint i = 0; i < uint.MaxValue; i++)
                 {
-                    throw new Exception($"You're stupid [ {I} ]");
+                    if (GetDigitsFast(i, multipleTableGetDigitsFast) != GetDigits(i))
+                    {
+                        throw new Exception($"{nameof(GetDigitsFast)} failed for: {i}");
+                    }
+                }
+            }
+            
+            for (uint i= 0; i < 1_000_000; i++)
+            {
+                DEBUG(() => Console.WriteLine($"Current Term: {i}"));
+                
+                if (NextPalindrome(i) != NextPalindromeNaive(i))
+                {
+                    throw new Exception($"You're stupid [ {i} ]");
                 }
             }
 
@@ -60,66 +127,40 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             }
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        static void Main(string[] args)
-        {
-            // How to check codegen:
-            // Mac:
-            // export DOTNET_JitDisasm="Loop"
-            // dotnet run -c Release
-
-            Validate();
-
-            Console.WriteLine("Churning!");
-            
-            var startTime = DateTime.UtcNow;
-                
-            Loop();
-            
-            var endTime = DateTime.UtcNow;
-
-            var totalTime = endTime - startTime;
-
-            Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
-
-            Console.ReadKey();
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void Loop()
-        {
-            for (uint I = 0; I < int.MaxValue; I++)
-            {
-                NextPalindrome(I);
-            }
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetDigits(int num)
+        private static int GetDigitsFast(uint num, uint* multiplesOf10Table)
         {
-            var digits = 1;
-            
-            while (num > 9)
+            // uint.MaxValue is 4_294_967_295, which is 10 digits. Furthermore, we won't be able to fit a 9th element
+            // in multiplesOf10Table, because the value is too huge for uint.
+            if (num >= 1_000_000_000)
             {
-                num /= 10;
-                digits++;
+                goto Ret10;
             }
-
-            return digits;
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe int GetDigitsFast(uint num, uint* multiplesOf10Table)
-        {
+            
             var indexOfHighestSetBit = 31 - BitOperations.LeadingZeroCount(num);
-
+            
             // Int mul followed by int div ( Truncates ).
             // Do not convert it to indexOfHighestSetBit * ( 77 / 256 ), as it will become int * float
             var estDigits = (indexOfHighestSetBit * 77) / 256;
 
-            var offset = (num >= multiplesOf10Table[estDigits]) ? 2 : 1;
+            var tableVal = multiplesOf10Table[estDigits];
+            
+            var offset = (num >= tableVal) ? 2 : 1;
 
-            return estDigits + offset;
+            var result = estDigits + offset;
+
+            DEBUG(() =>
+            {
+                if (GetDigits(num) != result)
+                {
+                    throw new Exception($"{nameof(GetDigitsFast)} failed for: {num}");
+                }
+            });
+            
+            return result;
+            
+            Ret10:
+            return 10;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -159,15 +200,17 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 
         private static ReadOnlySpan<uint> MultiplesOf10 => new uint[] { 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000 };
 
+        private static readonly uint* MultiplesTable = (uint*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(MultiplesOf10));
+        
         // [MethodImpl(MethodImplOptions.NoInlining)] // For checking codegen
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe uint NextPalindrome(uint num)
+        private static uint NextPalindrome(uint num)
         {
-            var multiplesTable = (uint*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(MultiplesOf10));
-
+            var multiplesTable = MultiplesTable;
+            
             var multipleTableGetDigitsFast = multiplesTable + 1;
             
-            // var digits = GetDigits((int) num);
+            //var digits = GetDigits((int) num);
 
             var digits = GetDigitsFast(num, multipleTableGetDigitsFast);
             
