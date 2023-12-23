@@ -195,7 +195,6 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             // var right = num - (leftMiddleTermInclusive * divisor);
             
             DEBUG(() => Console.WriteLine($"Left + M | R -> {leftMiddleTermInclusive} | {right}"));
-
             
             // A term like 1001 would fail, as 01 is treated as 1, so $"{leftMiddleTermInclusive}{right}" will become 101
             // Debug.Assert($"{leftMiddleTermInclusive}{right}" == num.ToString());
@@ -294,11 +293,6 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             DEBUG(() => Console.WriteLine($"Unfortunate: {left}(L){middleTerm}(M){right}(R) | {leftMiddleTermInclusive}(L+M){right}(R) | LR: {leftReversed} | D-Half: {digitsPerHalf}"));
             
-            goto GreaterOrEquals;
-            
-            Ret:
-            return num;
-            
             GreaterOrEquals:
             numWithoutRightHalf = leftMiddleTermInclusive * divisor;
             
@@ -309,7 +303,8 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             DEBUG(() => Console.WriteLine(num));
 
-            goto Ret;
+            Ret:
+            return num;
             
             TwoDigits:
             // 10 to 99. Any two-digit divisible by 11 is a palindrome. E.x. 11, 22, 33 ... up to 99.
