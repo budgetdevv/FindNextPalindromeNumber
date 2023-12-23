@@ -11,6 +11,8 @@ namespace NextPalindrome
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static void Main(string[] args)
         {
+            //Console.WriteLine(FindHighestPalindrome());
+            
             // var multipleTableGetDigitsFast = MultiplesTable + 1;
             //
             // GetDigitsFast(1073741824, multipleTableGetDigitsFast);
@@ -22,7 +24,7 @@ namespace NextPalindrome
             // export DOTNET_JitDisasm="Loop"
             // dotnet run -c Release
 
-            Validate();
+            // Validate();
 
             Console.WriteLine("Churning!");
             
@@ -37,6 +39,82 @@ namespace NextPalindrome
             Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
 
             Console.ReadKey();
+        }
+
+        private static uint GetHighestPalindrome()
+        {
+            #if RELEASE
+            return 4_294_884_924;
+            #endif
+            
+            var num = uint.MaxValue;
+
+            while (true)
+            {
+                num--;
+
+                if (IsPalindrome(num))
+                {
+                    return num;
+                }
+            }
+        }
+
+        private static bool IsPalindrome(uint num)
+        {
+            var multiplesTable = MultiplesTable;
+            
+            // This should be constant-folded
+            var multipleTableGetDigitsFast = multiplesTable + 1;
+
+            var digits = GetDigitsFast(num, multipleTableGetDigitsFast);
+            
+            // Forward jump to favor slower paths.
+            switch (digits)
+            {
+                case 1:
+                    goto OneDigit;
+                case 2:
+                    goto TwoDigits;
+            }
+            
+            var digitsPerHalf = digits / 2;
+            
+            var divisor = multiplesTable[digitsPerHalf]; 
+            
+            var (leftMiddleTermInclusive, right) = Math.DivRem(num, divisor);
+            
+            var hasMiddleTerm = digits % 2 != 0;
+
+            uint left, middleTerm;
+
+            if (hasMiddleTerm)
+            {
+                left = leftMiddleTermInclusive / 10;
+            }
+
+            else
+            {
+                left = leftMiddleTermInclusive;
+            }
+            
+            var leftReversed = ReverseDigits(left);
+
+            return leftReversed == right;
+            
+            TwoDigits:
+            return TwoDigitsImpl(num);
+                
+            OneDigit:
+            return true;
+            
+            // Don't pollute hot path...it only happens for a minority subset of numbers [ 10 to 99 ]
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            bool TwoDigitsImpl(uint num)
+            {
+                // The only two-digit value < 11 is 10.
+                return num != 10 && num % 11 == 0;
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -67,9 +145,13 @@ namespace NextPalindrome
         {
             if (!skipGetDigitsFastValidate)
             {
+                const int ITERATIONS = 1_000_000;
+                
                 var multipleTableGetDigitsFast = MultiplesTable + 1;
-            
-                for (uint i = 0; i < uint.MaxValue; i++)
+
+                var highestPalindrome = GetHighestPalindrome();
+                
+                for (uint i = highestPalindrome; i >= highestPalindrome - ITERATIONS; i++)
                 {
                     if (GetDigitsFast(i, multipleTableGetDigitsFast) != GetDigits(i))
                     {
@@ -215,6 +297,7 @@ namespace NextPalindrome
             
             DEBUG(() => Console.WriteLine($"Digits: {digits}"));
 
+            // Forward jump to favor slower paths.
             switch (digits)
             {
                 case 1:
@@ -228,7 +311,6 @@ namespace NextPalindrome
             
             DEBUG(() => Console.WriteLine($"Digits per half: {digitsPerHalf}"));
             
-            // var divisor = (int) Math.Pow(10, digitsPerHalf);
             var divisor = multiplesTable[digitsPerHalf]; 
             
             DEBUG(() => Console.WriteLine($"Divisor: {divisor}"));
