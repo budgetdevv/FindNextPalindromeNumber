@@ -201,16 +201,6 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 
             var left = leftMiddleTermInclusive;
 
-            var hasMiddleTerm = digits % 2 != 0;
-
-            Unsafe.SkipInit(out uint middleTerm);
-            
-            if (hasMiddleTerm)
-            {
-                (left, middleTerm) = Math.DivRem(left, 10);
-                DEBUG(() => Console.WriteLine($"Middle Term: {middleTerm}"));
-            }
-
             DEBUG(() => Console.WriteLine($"{left}{right}"));
             
             var leftReversed = ReverseDigits(left);
@@ -227,16 +217,21 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             // Unfortunately, this will require more work. E.x. 619: 9 > 6, so we need to add until 626.
             // Here's the cool part: If there's a middle term, and while it is < 9, we can "reset" the right term for "free"
 
-            uint numWithoutRightHalf;
+            var hasMiddleTerm = digits % 2 != 0;
             
-            if (hasMiddleTerm && middleTerm < 9)
+            if (hasMiddleTerm)
             {
-                // The middle term is actually the leftMiddleTermInclusive's last digit!
-                numWithoutRightHalf = leftMiddleTermInclusive * divisor;
-                goto AddLeftReversed;
+                (left, var middleTerm) = Math.DivRem(left, 10);
+                DEBUG(() => Console.WriteLine($"Middle Term: {middleTerm}"));
+
+                if (middleTerm < 9)
+                {
+                    // The middle term is actually the leftMiddleTermInclusive's last digit!
+                    goto AddLeftReversed;
+                }
             }
             
-            // Wow this is really unfortunate...
+            // Wow this is really unfortunate...Since left will change, we will have to reverse left to right again...
             
             DEBUG(() => Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)"));
             
@@ -249,16 +244,14 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             // 99 9 70 
             // But that is not possible, since L-R of 99 is well...99. You can't have L-R of > 99.
 
-            DEBUG(() => Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M) {left}(L) {middleTerm}(M)"));
+            DEBUG(() => Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)"));
 
             leftReversed = ReverseDigits(left);
             
             DEBUG(() => Console.WriteLine($"Unfortunate: L-R ( Post ): {leftReversed}"));
             
-            DEBUG(() => Console.WriteLine($"Unfortunate: {left}(L){middleTerm}(M){right}(R) | {leftMiddleTermInclusive}(L+M){right}(R) | LR: {leftReversed} | D-Half: {digitsPerHalf}"));
-            
             AddLeftReversed:
-            numWithoutRightHalf = leftMiddleTermInclusive * divisor;
+            var numWithoutRightHalf = leftMiddleTermInclusive * divisor;
             
             DEBUG(() => Console.WriteLine(numWithoutRightHalf));
             
