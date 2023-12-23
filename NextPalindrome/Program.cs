@@ -237,20 +237,30 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             // Wow this is really unfortunate...
 
-            if (hasMiddleTerm)
-            {
-                leftMiddleTermInclusive = leftMiddleTermInclusive - middleTerm + 10;
-            }
+            
+            // Overthinking...Here I attempt to set the middle term in ( L + M ) to 0, then add 10 which basically
+            // increments last digit of L. However, since previous branch already ensure that middleTerm == 9
+            // ( Well, cuz !( middleTerm < 9 ), and middleTerm is only up to 9. So it'd carry over to L and cause M to
+            // become 0 anyway. Efficiently increment leftMiddleTermInclusive without branching.
+            
+            // if (hasMiddleTerm)
+            // {
+            //     leftMiddleTermInclusive = leftMiddleTermInclusive - middleTerm + 10;
+            // }
+            //
+            // else
+            // {
+            //     leftMiddleTermInclusive++;
+            // }
 
-            else
-            {
-                leftMiddleTermInclusive++;
-            }
+            leftMiddleTermInclusive++;
             
             DEBUG(() => Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)"));
             
+            #if DEBUG
             // Middle term is now zero. E.x. 699 ( L-R: 6 ) -> 707 ( L-R: 7 ) [ digitsPerHalf: 1 ], 60999 ( L-R: 06 ) -> 61016 ( L-R: 16 ) [ digitsPerHalf: 2 ]
             middleTerm = 0;
+            #endif
 
             // leftReversed is treated as right
             
