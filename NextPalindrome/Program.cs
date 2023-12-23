@@ -1,4 +1,4 @@
-﻿// define PRINT_DEBUG
+﻿// #define PRINT_DEBUG
 
 using System.Diagnostics;
 using System.Numerics;
@@ -9,50 +9,41 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 {
     internal static class Program
     {
-        // Everything is inlined so that they are compiled to tier 1 immediately.
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         static void Main(string[] args)
         {
-            // NextPalindrome(1001);
+            // How to check codegen:
+            // Mac:
+            // export DOTNET_JitDisasm="NextPalindrome"
+            // dotnet run -c Release
 
-            // return;
-
-            const bool TEST = false;
-
-            if (TEST)
+            for (uint I = 0; I < 1_000_000; I++)
             {
-                for (uint I = 0; I < 1_000_000; I++)
-                {
-                    DEBUG(() => Console.WriteLine($"Current Term: {I}"));
+                DEBUG(() => Console.WriteLine($"Current Term: {I}"));
                 
-                    if (NextPalindrome(I) != NextPalindromeNaive(I))
-                    {
-                        throw new Exception("You're stupid");
-                    }
+                if (NextPalindrome(I) != NextPalindromeNaive(I))
+                {
+                    throw new Exception($"You're stupid [ {I} ]");
                 }
-
-                Console.WriteLine("You're not so stupid after all");
             }
 
-            else
+            Console.WriteLine("You're not so stupid after all! Tier 1 code should be JITted by now.");
+
+            Console.WriteLine("Churning!");
+                
+            var startTime = DateTime.UtcNow;
+                
+            for (uint I = 0; I < int.MaxValue; I++)
             {
-                Console.WriteLine("Churning!");
-                
-                var startTime = DateTime.UtcNow;
-                
-                for (uint I = 0; I < int.MaxValue; I++)
-                {
-                    NextPalindrome(I);
-                }
-
-                var endTime = DateTime.UtcNow;
-
-                var totalTime = endTime - startTime;
-
-                Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
-
-                Console.ReadKey();
+                NextPalindrome(I);
             }
+
+            var endTime = DateTime.UtcNow;
+
+            var totalTime = endTime - startTime;
+
+            Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
+
+            Console.ReadKey();
             
             return;
             
@@ -157,6 +148,7 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 
         private static ReadOnlySpan<uint> MultiplesOf10 => new uint[] { 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000 };
 
+        // [MethodImpl(MethodImplOptions.NoInlining)] // For checking codegen
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe uint NextPalindrome(uint num)
         {
@@ -173,6 +165,7 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             switch (digits)
             {
                 case 1:
+                    //return num;
                     goto Ret;
                 case 2:
                     goto TwoDigits;
@@ -199,7 +192,20 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             // A term like 1001 would fail, as 01 is treated as 1, so $"{leftMiddleTermInclusive}{right}" will become 101
             // Debug.Assert($"{leftMiddleTermInclusive}{right}" == num.ToString());
 
-            var left = leftMiddleTermInclusive;
+            var hasMiddleTerm = digits % 2 != 0;
+
+            uint left, middleTerm;
+
+            if (hasMiddleTerm)
+            {
+                (left, middleTerm) = Math.DivRem(leftMiddleTermInclusive, 10);
+            }
+
+            else
+            {
+                left = leftMiddleTermInclusive;
+                middleTerm = uint.MaxValue; // Any middleTerm value > 9 denotes absence of middleTerm value
+            }
 
             DEBUG(() => Console.WriteLine($"{left}{right}"));
             
@@ -216,19 +222,13 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             // Unfortunately, this will require more work. E.x. 619: 9 > 6, so we need to add until 626.
             // Here's the cool part: If there's a middle term, and while it is < 9, we can "reset" the right term for "free"
-
-            var hasMiddleTerm = digits % 2 != 0;
             
-            if (hasMiddleTerm)
+            // Any middleTerm value > 9 denotes absence of middleTerm value
+            // Instead of if (hasMiddleTerm && middleTerm < 9 ), since we already perform hasMiddleTerm check above.
+            if (middleTerm < 9)
             {
-                (left, var middleTerm) = Math.DivRem(left, 10);
-                DEBUG(() => Console.WriteLine($"Middle Term: {middleTerm}"));
-
-                if (middleTerm < 9)
-                {
-                    // The middle term is actually the leftMiddleTermInclusive's last digit!
-                    goto AddLeftReversed;
-                }
+                // The middle term is actually the leftMiddleTermInclusive's last digit!
+                goto AddLeftReversed;
             }
             
             // Wow this is really unfortunate...Since left will change, we will have to reverse left to right again...
@@ -263,25 +263,32 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             return num;
             
             TwoDigits:
-            // 10 to 99. Any two-digit divisible by 11 is a palindrome. E.x. 11, 22, 33 ... up to 99.
-            
-            // However, a number less than 11 mod 11 would just return the number itself...
-            if (num > 11)
-            {
-                var rem = num % 11;
+            return TwoDigitsImpl(num);
                 
-                if (rem != 0)
-                {
-                    num += (11 - rem);
-                }
-            }
-
-            else
+            // Don't pollute hot path...it only happens for a minority subset of numbers [ 10 to 99 ]
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            uint TwoDigitsImpl(uint num)
             {
-                num = 11;
-            }
+                // 10 to 99. Any two-digit divisible by 11 is a palindrome. E.x. 11, 22, 33 ... up to 99.
             
-            goto Ret;
+                // However, a number less than 11 mod 11 would just return the number itself...
+                if (num > 11)
+                {
+                    var rem = num % 11;
+                
+                    if (rem != 0)
+                    {
+                        num += (11 - rem);
+                    }
+                }
+
+                else
+                {
+                    num = 11;
+                }
+
+                return num;
+            }
         }
     }
 }
