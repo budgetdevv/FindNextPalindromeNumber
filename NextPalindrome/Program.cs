@@ -62,6 +62,9 @@ namespace NextPalindrome
 
         private static bool IsPalindrome(uint num)
         {
+            // Most of the code are copied from GetCurrentOrNextPalindrome(), so jump to that method if you are looking
+            // for comments.
+            
             var multiplesTable = MultiplesTable;
             
             // This should be constant-folded
@@ -122,7 +125,7 @@ namespace NextPalindrome
         {
             for (uint I = 0; I < int.MaxValue; I++)
             {
-                NextPalindrome(I);
+                GetCurrentOrNextPalindrome(I);
             }
         }
 
@@ -164,7 +167,7 @@ namespace NextPalindrome
             {
                 DEBUG(() => Console.WriteLine($"Current Term: {i}"));
                 
-                if (NextPalindrome(i) != NextPalindromeNaive(i))
+                if (GetCurrentOrNextPalindrome(i) != NextPalindromeNaive(i))
                 {
                     throw new Exception($"You're stupid [ {i} ]");
                 }
@@ -286,7 +289,7 @@ namespace NextPalindrome
         
         // [MethodImpl(MethodImplOptions.NoInlining)] // For checking codegen
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint NextPalindrome(uint num)
+        private static uint GetCurrentOrNextPalindrome(uint num)
         {
             var multiplesTable = MultiplesTable;
             
@@ -318,9 +321,6 @@ namespace NextPalindrome
             var (leftMiddleTermInclusive, right) = Math.DivRem(num, divisor);
             
             DEBUG(() => Console.WriteLine($"Left + M | R -> {leftMiddleTermInclusive} | {right}"));
-            
-            // A term like 1001 would fail, as 01 is treated as 1, so $"{leftMiddleTermInclusive}{right}" will become 101
-            // Debug.Assert($"{leftMiddleTermInclusive}{right}" == num.ToString());
 
             var hasMiddleTerm = digits % 2 != 0;
 
