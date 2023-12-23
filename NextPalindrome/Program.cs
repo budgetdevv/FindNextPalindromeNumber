@@ -86,7 +86,7 @@ namespace NextPalindrome
             
             var hasMiddleTerm = digits % 2 != 0;
 
-            uint left, middleTerm;
+            uint left;
 
             if (hasMiddleTerm)
             {
