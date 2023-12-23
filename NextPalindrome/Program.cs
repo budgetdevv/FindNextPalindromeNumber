@@ -4,12 +4,12 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace NextPalindrome // Note: actual namespace depends on the project name.
+namespace NextPalindrome
 {
     internal static unsafe class Program
     {
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // var multipleTableGetDigitsFast = MultiplesTable + 1;
             //
@@ -208,9 +208,8 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
         {
             var multiplesTable = MultiplesTable;
             
+            // This should be constant-folded
             var multipleTableGetDigitsFast = multiplesTable + 1;
-            
-            //var digits = GetDigits((int) num);
 
             var digits = GetDigitsFast(num, multipleTableGetDigitsFast);
             
@@ -219,7 +218,6 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             switch (digits)
             {
                 case 1:
-                    //return num;
                     goto Ret;
                 case 2:
                     goto TwoDigits;
@@ -236,10 +234,6 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             DEBUG(() => Console.WriteLine($"Divisor: {divisor}"));
 
             var (leftMiddleTermInclusive, right) = Math.DivRem(num, divisor);
-
-            // var leftMiddleTermInclusive = num / divisor;
-            //
-            // var right = num - (leftMiddleTermInclusive * divisor);
             
             DEBUG(() => Console.WriteLine($"Left + M | R -> {leftMiddleTermInclusive} | {right}"));
             
