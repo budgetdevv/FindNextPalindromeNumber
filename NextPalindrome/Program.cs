@@ -1,6 +1,5 @@
 ﻿// #define PRINT_DEBUG
 
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -23,6 +22,8 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             }
 
             Console.WriteLine("You're not so stupid after all!");
+
+            return;
             
             // Generated with AI
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
