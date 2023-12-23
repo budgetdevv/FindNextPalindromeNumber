@@ -165,7 +165,7 @@ namespace NextPalindrome
             
             for (uint i= 0; i < 1_000_000; i++)
             {
-                DEBUG(() => Console.WriteLine($"Current Term: {i}"));
+                Console.WriteLine($"Current Term: {i}");
                 
                 if (GetCurrentOrNextPalindrome(i) != NextPalindromeNaive(i))
                 {
@@ -234,13 +234,12 @@ namespace NextPalindrome
 
             var result = estDigits + offset;
 
-            DEBUG(() =>
+            #if PRINT_DEBUG
+            if (GetDigits(num) != result)
             {
-                if (GetDigits(num) != result)
-                {
-                    throw new Exception($"{nameof(GetDigitsFast)} failed for: {num}");
-                }
-            });
+                throw new Exception($"{nameof(GetDigitsFast)} failed for: {num}");
+            }
+            #endif
             
             return result;
             
@@ -275,14 +274,6 @@ namespace NextPalindrome
             return newNum;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DEBUG(Action action)
-        {
-            #if PRINT_DEBUG
-            action();
-            #endif
-        }
-
         private static ReadOnlySpan<uint> MultiplesOf10 => new uint[] { 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000 };
 
         private static readonly uint* MultiplesTable = (uint*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(MultiplesOf10));
@@ -297,8 +288,10 @@ namespace NextPalindrome
             var multipleTableGetDigitsFast = multiplesTable + 1;
 
             var digits = GetDigitsFast(num, multipleTableGetDigitsFast);
-            
-            DEBUG(() => Console.WriteLine($"Digits: {digits}"));
+
+            #if PRINT_DEBUG
+            Console.WriteLine($"Digits: {digits}");
+            #endif
 
             // Forward jump to favor slower paths.
             switch (digits)
@@ -312,16 +305,22 @@ namespace NextPalindrome
             // Division truncates. E.x. 9 / 2 = 4. We don't care about middle digit.
             var digitsPerHalf = digits / 2;
             
-            DEBUG(() => Console.WriteLine($"Digits per half: {digitsPerHalf}"));
+            #if PRINT_DEBUG
+            Console.WriteLine($"Digits per half: {digitsPerHalf}");
+            #endif
             
             var divisor = multiplesTable[digitsPerHalf]; 
             
-            DEBUG(() => Console.WriteLine($"Divisor: {divisor}"));
+            #if PRINT_DEBUG
+            Console.WriteLine($"Divisor: {divisor}");
+            #endif
 
             var (leftMiddleTermInclusive, right) = Math.DivRem(num, divisor);
             
-            DEBUG(() => Console.WriteLine($"Left + M | R -> {leftMiddleTermInclusive} | {right}"));
-
+            #if PRINT_DEBUG
+            Console.WriteLine($"Left + M | R -> {leftMiddleTermInclusive} | {right}");
+            #endif
+            
             var hasMiddleTerm = digits % 2 != 0;
 
             uint left, middleTerm;
@@ -337,11 +336,15 @@ namespace NextPalindrome
                 middleTerm = uint.MaxValue; // Any middleTerm value > 9 denotes absence of middleTerm value
             }
 
-            DEBUG(() => Console.WriteLine($"{left}{right}"));
+            #if PRINT_DEBUG
+            Console.WriteLine($"{left}{right}");
+            #endif
             
-            var leftReversed = ReverseDigits(left);
+            var leftReversed = ReverseDigits(left);   
 
-            DEBUG(() => Console.WriteLine($"R: {right} | L-R: {leftReversed}"));
+            #if PRINT_DEBUG
+            Console.WriteLine($"R: {right} | L-R: {leftReversed}");
+            #endif
             
             if (leftReversed >= right)
             {
@@ -363,7 +366,9 @@ namespace NextPalindrome
             
             // Wow this is really unfortunate...Since left will change, we will have to reverse left to right again...
             
-            DEBUG(() => Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)"));
+            #if PRINT_DEBUG
+            Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)");
+            #endif
             
             // L  M T
             // 50 9 70 ( L-R: 05 )-> 51 0 15
@@ -374,21 +379,28 @@ namespace NextPalindrome
             // 99 9 70 
             // But that is not possible, since L-R of 99 is well...99. You can't have L-R of > 99.
 
-            DEBUG(() => Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)"));
-
-            leftReversed = ReverseDigits(left);
+            #if PRINT_DEBUG
+            Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)");
+            #endif
             
-            DEBUG(() => Console.WriteLine($"Unfortunate: L-R ( Post ): {leftReversed}"));
+            leftReversed = ReverseDigits(left);
+            #if PRINT_DEBUG
+            Console.WriteLine($"Unfortunate: L-R ( Post ): {leftReversed}");
+            #endif
             
             AddLeftReversed:
             var numWithoutRightHalf = leftMiddleTermInclusive * divisor;
             
-            DEBUG(() => Console.WriteLine(numWithoutRightHalf));
+            #if PRINT_DEBUG
+            Console.WriteLine(numWithoutRightHalf);
+            #endif
             
             num = numWithoutRightHalf + leftReversed;
             
-            DEBUG(() => Console.WriteLine(num));
-
+            #if PRINT_DEBUG
+            Console.WriteLine(num);
+            #endif
+            
             Ret:
             return num;
             
