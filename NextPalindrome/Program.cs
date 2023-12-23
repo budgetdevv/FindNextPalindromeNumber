@@ -9,13 +9,9 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
 {
     internal static class Program
     {
-        static void Main(string[] args)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void Validate()
         {
-            // How to check codegen:
-            // Mac:
-            // export DOTNET_JitDisasm="NextPalindrome"
-            // dotnet run -c Release
-
             for (uint I = 0; I < 1_000_000; I++)
             {
                 DEBUG(() => Console.WriteLine($"Current Term: {I}"));
@@ -26,26 +22,7 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
                 }
             }
 
-            Console.WriteLine("You're not so stupid after all! Tier 1 code should be JITted by now.");
-
-            Console.WriteLine("Churning!");
-                
-            var startTime = DateTime.UtcNow;
-                
-            for (uint I = 0; I < int.MaxValue; I++)
-            {
-                NextPalindrome(I);
-            }
-
-            var endTime = DateTime.UtcNow;
-
-            var totalTime = endTime - startTime;
-
-            Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
-
-            Console.ReadKey();
-            
-            return;
+            Console.WriteLine("You're not so stupid after all!");
             
             // Generated with AI
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -80,7 +57,40 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
                     n++;
                 }
             }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        static void Main(string[] args)
+        {
+            // How to check codegen:
+            // Mac:
+            // export DOTNET_JitDisasm="Loop"
+            // dotnet run -c Release
+
+            Validate();
+
+            Console.WriteLine("Churning!");
             
+            var startTime = DateTime.UtcNow;
+                
+            Loop();
+            
+            var endTime = DateTime.UtcNow;
+
+            var totalTime = endTime - startTime;
+
+            Console.WriteLine($"Done! Took {totalTime.Minutes} Min(s) {totalTime.Seconds} Second(s)!");
+
+            Console.ReadKey();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void Loop()
+        {
+            for (uint I = 0; I < int.MaxValue; I++)
+            {
+                NextPalindrome(I);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
