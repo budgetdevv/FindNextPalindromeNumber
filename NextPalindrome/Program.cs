@@ -219,8 +219,10 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             if (leftReversed >= right)
             {
-                goto GreaterOrEquals;
+                goto AddLeftReversed;
             }
+            
+            leftMiddleTermInclusive++;
             
             // Unfortunately, this will require more work. E.x. 619: 9 > 6, so we need to add until 626.
             // Here's the cool part: If there's a middle term, and while it is < 9, we can "reset" the right term for "free"
@@ -230,61 +232,13 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             if (hasMiddleTerm && middleTerm < 9)
             {
                 // The middle term is actually the leftMiddleTermInclusive's last digit!
-                leftMiddleTermInclusive += 1;
                 numWithoutRightHalf = leftMiddleTermInclusive * divisor;
                 goto AddLeftReversed;
             }
             
             // Wow this is really unfortunate...
-
-            
-            // Overthinking...Here I attempt to set the middle term in ( L + M ) to 0, then add 10 which basically
-            // increments last digit of L. However, since previous branch already ensure that middleTerm == 9
-            // ( Well, cuz !( middleTerm < 9 ), and middleTerm is only up to 9. So it'd carry over to L and cause M to
-            // become 0 anyway. Efficiently increment leftMiddleTermInclusive without branching.
-            
-            // if (hasMiddleTerm)
-            // {
-            //     leftMiddleTermInclusive = leftMiddleTermInclusive - middleTerm + 10;
-            // }
-            //
-            // else
-            // {
-            //     leftMiddleTermInclusive++;
-            // }
-
-            leftMiddleTermInclusive++;
             
             DEBUG(() => Console.WriteLine($"Unfortunate: {leftMiddleTermInclusive}(L+M)"));
-            
-            #if DEBUG
-            // Middle term is now zero. E.x. 699 ( L-R: 6 ) -> 707 ( L-R: 7 ) [ digitsPerHalf: 1 ], 60999 ( L-R: 06 ) -> 61016 ( L-R: 16 ) [ digitsPerHalf: 2 ]
-            middleTerm = 0;
-            #endif
-
-            // leftReversed is treated as right
-            
-            // right += (digitsPerHalf - 1) * 10;
-            
-            // right = leftReversed + ((digitsPerHalf - 1) * 10);
-
-            
-            // Unreliable approach, due to overflow. E.x. 91 + 1 = 101
-            // // 192 ( L-R: 1 ) 
-            // // R = 1 ( Which is L-R of 1 ) + 10 ^ ( 1 ( Which is digitsPerHalf ) ) = 1 + 1 = 2
-            // // The end result is ( left++ ( Which is 1 + 1 ) ) middleTerm ( Set to 0 ) ( R, which is 2 ) ->
-            // // ( 1 + 1 ) ( 0 ) ( 2 ) ->
-            // // 2 0 2
-            //
-            // // 12992 ( L-R: 21 ) 
-            // // R = 21 ( Which is L-R of 12 ) + 10 ^ ( 2 ( Which is digitsPerHalf ) ) = 21 + 10 = 31
-            // // The end result is ( left++ ( Which is ( 12 + 1 ) ) middleTerm ( Set to 0 ) ( R, which is 31 ) ->
-            // // ( 12 + 1 ) ( 0 ) ( 31 ) ->
-            // // 13 0 31
-            //
-            // DEBUG(() => Console.WriteLine($"Unfortunate: L-R ( Pre ): {leftReversed}"));
-            //
-            // leftReversed += (int) Math.Pow(10, (digitsPerHalf - 1));
             
             // L  M T
             // 50 9 70 ( L-R: 05 )-> 51 0 15
@@ -303,10 +257,9 @@ namespace NextPalindrome // Note: actual namespace depends on the project name.
             
             DEBUG(() => Console.WriteLine($"Unfortunate: {left}(L){middleTerm}(M){right}(R) | {leftMiddleTermInclusive}(L+M){right}(R) | LR: {leftReversed} | D-Half: {digitsPerHalf}"));
             
-            GreaterOrEquals:
+            AddLeftReversed:
             numWithoutRightHalf = leftMiddleTermInclusive * divisor;
             
-            AddLeftReversed:
             DEBUG(() => Console.WriteLine(numWithoutRightHalf));
             
             num = numWithoutRightHalf + leftReversed;
