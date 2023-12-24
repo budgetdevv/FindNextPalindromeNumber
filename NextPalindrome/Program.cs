@@ -1,5 +1,5 @@
 ﻿// #define PRINT_DEBUG
-#define USE_SLOW_DIVIDE
+// #define USE_SLOW_DIVIDE
 
 using System.Diagnostics;
 using System.Numerics;
