@@ -1,7 +1,6 @@
 ﻿// #define PRINT_DEBUG
 // #define USE_SLOW_DIVIDE
 
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -341,32 +340,6 @@ namespace NextPalindrome
                 return newNum;
             }
         }
-
-        // private static uint[] GenerateReverseTwoDigitsTable()
-        // {
-        //     // Yes, we don't have to handle numbers < 10, but we still allocate extra anyway.
-        //     // This will save us from decrementing by 11 every loop.
-        //     // We also generate reverse variant for 0 - 9 ( Which will return the same number anyway ) to simplify
-        //     // loop in ReverseDigitsFast(), allowing to do newNum += reversedTwoDigitsTable[rem] even when rem <= 9.
-        //     const uint START = 0, END = 99;
-        //     
-        //     // + 1, as array indexes are 0-based.
-        //     // E.x. An index of 99 would mean accessing the 100 th element in the array.
-        //     const int LENGTH = (int) (END + 1);
-        //
-        //     var arr = GC.AllocateUninitializedArray<uint>(LENGTH, true);
-        //     
-        //     var num = START;
-        //     
-        //     for (; num <= END; num++)
-        //     {
-        //         arr[num] = ReverseDigits(num);
-        //     }
-        //     
-        //     return arr;
-        // }
-        //
-        // private static readonly uint[] ReversedTwoDigitsTable = GenerateReverseTwoDigitsTable();
         
         // Yes, we don't have to handle numbers < 10, but we still allocate extra anyway.
         // This will save us from decrementing by 11 every loop.
@@ -479,18 +452,14 @@ namespace NextPalindrome
             block1 = (uint) reversedTwoDigitsTable[block1];
             DivOnce:
             (num, block2) = DivRemFast(num, 100, dividingByConst: true);
-            // var block2GreaterEqual10 = block2 >= 10;
             block2 = (uint) reversedTwoDigitsTable[block2];
             
             if (!isOdd)
             {
                 goto Ret;
             }
-
-            // block2Multiplier = block2GreaterEqual10 ? (uint) 0_00_10 : 0_01_00;
             
-            ProcessRemainder:
-            block3 = num; // (uint) reversedTwoDigitsTable[num];
+            block3 = num;
             
             Ret:
             switch (digitCount)
@@ -501,8 +470,6 @@ namespace NextPalindrome
                     return (block1 * 0_01_00) + block2;
                 case 3:
                     return (block2 * 0_00_10) + block3;
-                // case 2:
-                //     return block3;
             }
             
             One:
@@ -658,7 +625,6 @@ namespace NextPalindrome
 
             var reversedTwoDigitsTable = ReversedTwoDigitsTable;
             
-            // var leftReversed = ReverseDigits(left);   
             var leftReversed = ReverseDigitsFast(left, reversedTwoDigitsTable, digitsPerHalf);
 
             #if PRINT_DEBUG
