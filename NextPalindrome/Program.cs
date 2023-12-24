@@ -1,4 +1,5 @@
 ﻿// #define PRINT_DEBUG
+#define USE_SLOW_DIVIDE
 
 using System.Diagnostics;
 using System.Numerics;
@@ -12,7 +13,7 @@ namespace NextPalindrome
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static void Main(string[] args)
         {
-            ReverseDigitsFast(100_000, ReversedTwoDigitsTable, 6);
+            // GetCurrentOrNextPalindrome(100);
             
             // How to check codegen:
             // Mac:
@@ -36,8 +37,25 @@ namespace NextPalindrome
             Console.ReadKey();
         }
 
-        private static (uint quotient, uint remainder) DivRemFast(uint num, uint divisor)
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static (uint quotient, uint remainder) DivRemFast(uint num, uint divisor, bool dividingByConst)
         {
+            // Unsafe.SkipInit(out (uint num, uint divisor) value);
+            //
+            // if (!dividingByConst)
+            // {
+            //     goto Ret;
+            // }
+            //
+            // uint quotient = unchecked(num / divisor);
+            // value = (quotient, num - (quotient * divisor));
+            //
+            // Ret:
+            // return value;
+            //
+            // // return (dividingByConst || divisor != 0) ? Math.DivRem(num, divisor) : value;
+
             return Math.DivRem(num, divisor);
         }
         
@@ -85,7 +103,7 @@ namespace NextPalindrome
             
             var divisor = multiplesTable[digitsPerHalf]; 
             
-            var (leftMiddleTermInclusive, right) = Math.DivRem(num, divisor);
+            var (leftMiddleTermInclusive, right) = DivRemFast(num, divisor, dividingByConst: false);
             
             var hasMiddleTerm = digits % 2 != 0;
 
@@ -126,6 +144,7 @@ namespace NextPalindrome
             for (uint I = 0; I < int.MaxValue; I++)
             {
                 GetCurrentOrNextPalindrome(I);
+                GetCurrentOrNextPalindrome(I);
             }
         }
 
@@ -144,7 +163,7 @@ namespace NextPalindrome
         }
         
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void Validate(bool skipGetDigitsFastValidate = true)
+        private static void Validate(bool skipGetDigitsFastValidate = true, bool skipReverseDigitsFastValidate = true, bool skipDiv10TableValidate = true)
         {
             if (!skipGetDigitsFastValidate)
             {
@@ -163,7 +182,7 @@ namespace NextPalindrome
                 }
             }
 
-            if (true)
+            if (!skipReverseDigitsFastValidate)
             {
                 var multiplesOf10Table = MultiplesOf10TablePtr;
                 
@@ -175,7 +194,43 @@ namespace NextPalindrome
                     }
                 }
             }
-            
+
+            if (!skipDiv10TableValidate)
+            {
+                var div10 = DivideByMultiplesOf10Table[1];
+                var div100 = DivideByMultiplesOf10Table[2];
+                var div1000 = DivideByMultiplesOf10Table[3];
+                var div10_000 = DivideByMultiplesOf10Table[4];
+                var div100_000 = DivideByMultiplesOf10Table[5];
+
+                for (uint i = 0; i <= 99_999; i++)
+                {
+                    if (div10.DivideRem(i) != Math.DivRem(i, div10.Divisor))
+                    {
+                        throw new Exception($"{nameof(div10)} failed for number: {i}");
+                    }
+                    
+                    if (div100.DivideRem(i) != Math.DivRem(i, div100.Divisor))
+                    {
+                        throw new Exception($"{nameof(div100)} failed for number: {i}");
+                    }
+                    
+                    if (div1000.DivideRem(i) != Math.DivRem(i, div1000.Divisor))
+                    {
+                        throw new Exception($"{nameof(div1000)} failed for number: {i}");
+                    }
+                    
+                    if (div10_000.DivideRem(i) != Math.DivRem(i, div10_000.Divisor))
+                    {
+                        throw new Exception($"{nameof(div10_000)} failed for number: {i}");
+                    }
+                    
+                    if (div100_000.DivideRem(i) != Math.DivRem(i, div100_000.Divisor))
+                    {
+                        throw new Exception($"{nameof(div100_000)} failed for number: {i}");
+                    }
+                }
+            }
             
             for (uint i= 0; i < 1_000_000; i++)
             {
@@ -410,7 +465,6 @@ namespace NextPalindrome
             Unsafe.SkipInit(out uint block1);
             Unsafe.SkipInit(out uint block2);
             Unsafe.SkipInit(out uint block3);
-            Unsafe.SkipInit(out uint block2Multiplier);
             
             switch (digitCount)
             {
@@ -428,10 +482,10 @@ namespace NextPalindrome
             }
             
             DivTwice:
-            (num, block1) = DivRemFast(num, 100);
+            (num, block1) = DivRemFast(num, 100, dividingByConst: true);
             block1 = (uint) reversedTwoDigitsTable[block1];
             DivOnce:
-            (num, block2) = DivRemFast(num, 100);
+            (num, block2) = DivRemFast(num, 100, dividingByConst: true);
             // var block2GreaterEqual10 = block2 >= 10;
             block2 = (uint) reversedTwoDigitsTable[block2];
             
@@ -462,11 +516,82 @@ namespace NextPalindrome
             return num;
         }
 
+        [StructLayout(LayoutKind.Auto)]
+        private readonly struct MagicNumberPair
+        {
+            public readonly uint Divisor, MagicNumber;
+
+            // It has to pad for good alignment anyway, no point using a byte.
+            public readonly int ShiftValue;
+
+            public MagicNumberPair(uint divisor, uint magicNumber, int shiftValue)
+            { 
+                Divisor = divisor;
+                MagicNumber = magicNumber;
+                ShiftValue = shiftValue;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public uint DivideBy(uint number)
+            {
+                unchecked
+                {
+                    var num = (ulong) number;
+
+                    if (Divisor == 100_000)
+                    {
+                        // TODO: Any way to optimize this?
+                        // Unfortunately, it does two shifts.
+                        // https://sharplab.io/#v2:EYLgxg9gTgpgtADwGwBYA0AXEBDAzgWwB8ABAJgEYBYAKGIGYACMhgYQYG8aHunGBXAJYA7DAwCyACkEiGAgJQMuPTtR5qmAdlkMA9A3IAGAwH0jBgNxLuAXxrWgA===
+                        num >>= 5;
+                    }
+                    
+                    var mul = num * MagicNumber;
+                
+                    return (uint) (mul >> ShiftValue);
+                }
+            }
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public (uint number, uint remainder) DivideRem(uint number)
+            {
+                var quotient = DivideBy(number);
+
+                var remainder = number - (quotient * Divisor);
+
+                return (quotient, remainder);
+            }
+        }
+
+        private static MagicNumberPair* GenerateDivideByMultiplesOf10Table()
+        {
+            var table = (MagicNumberPair*) NativeMemory.AlignedAlloc((UIntPtr)((5 + 1) * sizeof(MagicNumberPair)), 64);
+            
+            // You can't have 0 digits.
+            
+            // https://sharplab.io/#v2:EYLgxg9gTgpgtADwGwBYA0AXEBDAzgWwB8ABAJgEYBYAKGIGYACMhgYQYG8aHunGBXAJYA7DAwCyACkEiGAgJQMuPTtR5qmAdlkMA9A3IAGANxLuAXxpmgA=
+            // 1 % 10 = 1
+            table[1] = new MagicNumberPair(10, 0xcccccccd, 0x23);
+            // 11_11 % 100 = 11
+            table[2] = new MagicNumberPair(100, 0x51eb851f, 0x25);
+            // 111_111 % 1000 = 111
+            table[3] = new MagicNumberPair(1000, 0x10624dd3, 0x26);
+            // 1111_1111 % 1_0000 = 1111
+            table[4] = new MagicNumberPair(10_000, 0xd1b71759, 0x2d);
+            // 11111_11111 % 1_00000 = 11111
+            table[5] = new MagicNumberPair(100_000, 0xa7c5ac5, 0x27);
+
+            return table;
+        }
+        
+        // ONLY USE THIS FOR DIVIDING BY 1, 10, 100, 1_000, 10_000 !!!
+        // This is because we half the values, max digits for uint is 10, so 10 / 2 = 5.
+        private static readonly MagicNumberPair* DivideByMultiplesOf10Table = GenerateDivideByMultiplesOf10Table();
         private static ReadOnlySpan<uint> MultiplesOf10Table => new uint[] { 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000 };
 
         private static readonly uint* MultiplesOf10TablePtr = (uint*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(MultiplesOf10Table));
         
-        // [MethodImpl(MethodImplOptions.NoInlining)] // For checking codegen
+        [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static uint GetCurrentOrNextPalindrome(uint num)
         {
@@ -496,14 +621,24 @@ namespace NextPalindrome
             #if PRINT_DEBUG
             Console.WriteLine($"Digits per half: {digitsPerHalf}");
             #endif
-            
+
+
+            #if !USE_SLOW_DIVIDE
+            var divider = DivideByMultiplesOf10Table[digitsPerHalf];
+            #else
             var divisor = multiplesTable[digitsPerHalf]; 
+            #endif
             
             #if PRINT_DEBUG
             Console.WriteLine($"Divisor: {divisor}");
             #endif
 
-            var (leftMiddleTermInclusive, right) = Math.DivRem(num, divisor);
+            #if !USE_SLOW_DIVIDE
+            // outright ;)
+            var (leftMiddleTermInclusive, right) = divider.DivideRem(num);
+            #else
+            var (leftMiddleTermInclusive, right) = DivRemFast(num, divisor, dividingByConst: false);
+            #endif
             
             #if PRINT_DEBUG
             Console.WriteLine($"Left + M | R -> {leftMiddleTermInclusive} | {right}");
@@ -515,7 +650,7 @@ namespace NextPalindrome
 
             if (hasMiddleTerm)
             {
-                (left, middleTerm) = Math.DivRem(leftMiddleTermInclusive, 10);
+                (left, middleTerm) = DivRemFast(leftMiddleTermInclusive, 10, dividingByConst: true);
             }
 
             else
@@ -581,7 +716,11 @@ namespace NextPalindrome
             #endif
             
             AddLeftReversed:
+            #if !USE_SLOW_DIVIDE
+            var numWithoutRightHalf = leftMiddleTermInclusive * divider.Divisor;
+            #else
             var numWithoutRightHalf = leftMiddleTermInclusive * divisor;
+            #endif
             
             #if PRINT_DEBUG
             Console.WriteLine(numWithoutRightHalf);
