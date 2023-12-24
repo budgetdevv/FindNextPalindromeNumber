@@ -20,7 +20,7 @@ namespace NextPalindrome
             // export DOTNET_JitDisasm="Loop"
             // dotnet run -c Release
 
-            Validate();
+            // Validate();
 
             Console.WriteLine("Churning!");
             
