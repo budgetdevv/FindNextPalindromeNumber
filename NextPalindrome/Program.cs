@@ -370,8 +370,9 @@ namespace NextPalindrome
         
         // Yes, we don't have to handle numbers < 10, but we still allocate extra anyway.
         // This will save us from decrementing by 11 every loop.
-        // We also generate reverse variant for 0 - 9 ( Which will return the same number anyway ) to simplify
-        // loop in ReverseDigitsFast(), allowing to do newNum += reversedTwoDigitsTable[rem] even when rem <= 9.
+        // We also generate reverse variant for 0 - 9 ( Which will return num *= 10, E.x. 9 -> 90 ) to simplify
+        // This ensures validity of our algorithm. E.x. 101 -> 10 | 1 -> 1 | 10 -> 1 + 10 * 10 -> 101.
+        // It is a bit confusing, so do look at ReverseDigitsFast()
         private const uint REVERSE_TWO_DIGITS_TABLE_START = 0, 
                            REVERSE_TWO_DIGITS_TABLE_END = 99;
         
@@ -389,13 +390,6 @@ namespace NextPalindrome
             for (; num <= REVERSE_TWO_DIGITS_TABLE_END; num++)
             {
                 var reversed = (num < 10) ? (int) (num * 10) : (int) ReverseDigits(num);
-             
-                // var endsWithZero = num % 10 == 0;
-                //
-                // if (endsWithZero)
-                // {
-                //     reversed = -reversed;
-                // }
                 
                 table[num] = (sbyte) reversed;
             }
