@@ -144,7 +144,6 @@ namespace NextPalindrome
             for (uint I = 0; I < int.MaxValue; I++)
             {
                 GetCurrentOrNextPalindrome(I);
-                GetCurrentOrNextPalindrome(I);
             }
         }
 
