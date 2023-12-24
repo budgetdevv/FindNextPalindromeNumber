@@ -17,6 +17,8 @@ namespace NextPalindrome
             // How to check codegen:
             // Mac:
             // export DOTNET_JitDisasm="Loop"
+            // Windows:
+            // $Env:DOTNET_JitDisasm="Loop"
             // dotnet run -c Release
 
             // Validate();
@@ -140,9 +142,9 @@ namespace NextPalindrome
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void Loop()
         {
-            for (uint I = 0; I < int.MaxValue; I++)
+            for (uint i = 0; i < int.MaxValue; i++)
             {
-                GetCurrentOrNextPalindrome(I);
+                GetCurrentOrNextPalindrome(i);
             }
         }
 
