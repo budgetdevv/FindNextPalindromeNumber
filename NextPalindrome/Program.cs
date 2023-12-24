@@ -202,7 +202,7 @@ namespace NextPalindrome
                 var div10_000 = DivideByMultiplesOf10Table[4];
                 var div100_000 = DivideByMultiplesOf10Table[5];
 
-                for (uint i = 0; i <= 99_999; i++)
+                for (uint i = 0; i < uint.MaxValue; i++)
                 {
                     if (div10.DivideRem(i) != Math.DivRem(i, div10.Divisor))
                     {
